@@ -37,8 +37,13 @@ jobs:
       - name: Smoke test bundled OCR
         shell: pwsh
         run: |
-          & .\dist\Transplate\Transplate.exe --self-test
-          if ($LASTEXITCODE -ne 0) { throw "Bundled OCR smoke test failed: $LASTEXITCODE" }
+          $exe = (Resolve-Path .\dist\Transplate\Transplate.exe).Path
+          $process = Start-Process -FilePath $exe -ArgumentList '--self-test' -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            $errorFile = Join-Path $env:RUNNER_TEMP 'transplate-selftest-error.txt'
+            if (Test-Path $errorFile) { Get-Content $errorFile }
+            throw "Bundled OCR smoke test failed: $($process.ExitCode)"
+          }
       - name: Archive portable Windows build
         shell: pwsh
         run: Compress-Archive -Path dist/Transplate -DestinationPath Transplate-Windows-x64.zip
