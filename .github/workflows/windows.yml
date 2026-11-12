@@ -3,15 +3,16 @@ name: Build Windows
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -47,10 +48,34 @@ jobs:
       - name: Archive portable Windows build
         shell: pwsh
         run: Compress-Archive -Path dist/Transplate -DestinationPath Transplate-Windows-x64.zip
-      - name: Upload Windows artifact
+      - name: Upload Windows artifact (CI backup)
         uses: actions/upload-artifact@v4
         with:
           name: Transplate-Windows-x64
           path: Transplate-Windows-x64.zip
           if-no-files-found: error
           retention-days: 14
+      - name: Publish development Release
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Transplate Windows preview #${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          body: |
+            自动发布的 Windows x64 预览版。仅在单元测试、打包及 OCR 冒烟测试成功后发布。
+            下载 ZIP 并解压，运行 Transplate/Transplate.exe。请保留 _internal 文件夹。
+            Commit: ${{ github.sha }}
+          files: Transplate-Windows-x64.zip
+          fail_on_unmatched_files: true
+      - name: Publish versioned Release
+        if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Transplate ${{ github.ref_name }}
+          prerelease: false
+          generate_release_notes: true
+          files: Transplate-Windows-x64.zip
+          fail_on_unmatched_files: true

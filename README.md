@@ -2,7 +2,7 @@
 
 Windows 实时字幕转简体中文：**区域截图 → OCR → 繁体转简体 / 其他语言翻译 → 无焦点字幕浮层**。
 
-项目处于 **v0.1.0 首版**。不读取视频内部字幕轨，不修改源文件，也不是直接替换播放器字幕；它使用屏幕 OCR，适用于浏览器、常规桌面播放器和其他窗口化播放场景。
+项目处于 **v0.2.0 低延迟预览版**。不读取视频内部字幕轨，不修改源文件，也不是直接替换播放器字幕；它使用屏幕 OCR，适用于浏览器、常规桌面播放器和其他窗口化播放场景。
 
 ## 能力
 
@@ -10,13 +10,13 @@ Windows 实时字幕转简体中文：**区域截图 → OCR → 繁体转简体
 - **多语言字幕 OCR**：RapidOCR 默认中英识别模型随程序打包；繁体专用、日文、韩文、英文、拉丁字母语言模型首次使用时按需下载并缓存在 `%APPDATA%\Transplate\ocr-models`。请选对识别语言，不会自动识别所有语言。
 - **翻译成简体**：可选 Google 翻译（网络，基于第三方非官方客户端）或 OpenAI Chat Completions 兼容服务（例如本机 Ollama 或你自己的 API 服务器）。API Key 仅保留在进程内存中，不存储到偏好文件。
 - **覆盖字幕**：置顶、鼠标穿透的字幕浮层；支持 Windows 10 2004+ 的 `WDA_EXCLUDEFROMCAPTURE` 以防字幕被 OCR 重复读取。不支持时将浮层移到选定区域外。
-- 选择字幕位置、调节 OCR 间隔和字号；翻译结果缓存、仅字幕变化时触发翻译；区域支持多显示器/不同 DPI 的坐标转换（混合缩放复杂布局仍建议验证）。
+- 选择字幕位置、调节 OCR 间隔（默认 0.3 秒，最低 0.2 秒）和字号；静止画面跳过重复 OCR，周期性强制重新采样以避免漏检；翻译与 OCR 截图分线程，网络翻译不再阻塞下一帧识别；翻译结果缓存、仅字幕变化时触发翻译、丢弃过期译文；区域支持多显示器/不同 DPI 的坐标转换（混合缩放复杂布局仍建议验证）。
 
 ## Windows 直接运行
 
-在 [Actions](../../actions/workflows/windows.yml) 打开最新 **Build Windows** 成功记录，在 **Artifacts** 下载 `Transplate-Windows-x64`，解压 ZIP，运行 `Transplate/Transplate.exe`。这是免安装目录版，**不要只单独复制 EXE**，旁边的 `_internal` 目录包含模型与动态库。
+在 [Releases](../../releases) 下载最新 Windows 预览版的 `Transplate-Windows-x64.zip`，解压后运行 `Transplate/Transplate.exe`。若 Release 尚未生成，可从 [Actions](../../actions/workflows/windows.yml) 取得 CI 备用产物。这是免安装目录版，**不要只单独复制 EXE**，旁边的 `_internal` 目录包含模型与动态库。
 
-> GitHub Actions 构建文件在 workflow 成功后才可下载；仓库是私有的，需要已登录且有仓库访问权。当前没有发布 Release。
+> 仅通过单元测试、PyInstaller 打包及内置 OCR 冒烟测试的构建才会自动发布。main 分支更新发布独立的预览版 Release（build-* 标签），v* 标签发布正式版。仓库为私有仓库，需要已登录且拥有仓库访问权。
 
 使用步骤：
 
@@ -50,7 +50,7 @@ pyinstaller --noconfirm --clean --onedir --windowed --name Transplate --collect-
 .\dist\Transplate\Transplate.exe --self-test
 ```
 
-自动构建定义在 `.github/workflows/windows.yml`，每次推送 `main`、PR 或手动触发均会运行 Windows 单测、PyInstaller 打包、离线默认 OCR 冒烟测试，并上传 Windows ZIP 构建产物。
+自动构建定义在 `.github/workflows/windows.yml`，每次推送 `main`、PR 或手动触发均会运行 Windows 单测、PyInstaller 打包、离线默认 OCR 冒烟测试，并上传 CI 备用产物。main 分支构建成功会创建 **预览版 Release**；推送 `v*` 标签构建成功会创建 **正式版 Release**。
 
 ## 架构 / Android 方向
 
@@ -68,5 +68,5 @@ Android 后续可沿用 OCR/翻译业务逻辑设计，但需要另外实现 `Me
 
 - 本地简繁转换不上传文字、图片；翻译模式下 Google 翻译会接收识别的字幕文字。OpenAI 兼容 API 由你指定服务位置，远程 API 同样会传输文字。
 - 字幕截图只在内存中处理，不持久化；`%APPDATA%\Transplate\settings.json` 存偏好和区域坐标，不含 API Key；语言模型缓存位于同一目录下。
-- 初版暂不提供全局快捷键、托盘菜单、原始字幕区域的智能遮挡、批量字幕导出或音频识别；这些是未来迭代方向。
+- 暂不提供全局快捷键、托盘菜单、批量字幕导出或音频识别；原始字幕遮挡只作为未来可选增强，不影响主功能。默认现有黑色字幕浮层可部分覆盖原字幕。
 - 项目源码采用 MIT 许可证；OCR 引擎及模型、其他依赖遵循各自许可证。

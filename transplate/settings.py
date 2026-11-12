@@ -26,7 +26,7 @@ class Settings:
     provider: str = "google"      # google | openai_compatible
     api_base_url: str = "http://127.0.0.1:11434/v1"
     model: str = "qwen2.5:3b"
-    interval: float = 0.9
+    interval: float = 0.3
     font_size: int = 27
 
 
@@ -46,7 +46,7 @@ def load_settings(path: Path | None = None) -> Settings:
             if isinstance(payload.get(key), str):
                 setattr(result, key, payload[key])
         if isinstance(payload.get("interval"), (int, float)):
-            result.interval = min(5.0, max(0.4, float(payload["interval"])))
+            result.interval = min(5.0, max(0.2, float(payload["interval"])))
         if isinstance(payload.get("font_size"), int):
             result.font_size = min(64, max(14, payload["font_size"]))
         if isinstance(payload.get("region"), dict):
